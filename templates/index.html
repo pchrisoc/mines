@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Minesweeper</title>
+  <!-- Mobile compatibility meta tag -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Include Bulma CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <style>
+    /* Disable overscroll (elastic scrolling) */
+    html, body {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: auto;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Custom styles for the overall layout */
+    .columns.centered {
+      height: 100%;
+    }
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center; /* center content horizontally */
+      padding: 1rem;
+    }
+    .left-panel .title {
+      margin-bottom: 1.5rem;
+    }
+    
+    /* Custom styles for the enlarged Minesweeper board */
+    .board {
+      display: inline-grid;  /* inline-grid allows the board to shrink to fit its content */
+      gap: 3px;
+      margin: 20px auto;
+      background: #ccc;
+      padding: 15px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      text-align: center;
+      line-height: 40px;
+      border: 1px solid #999;
+      background-color: #aaa;
+      position: relative;
+      user-select: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 3px;
+      transition: background-color 0.2s;
+    }
+    .cell:hover {
+      background-color: #b0b0b0;
+    }
+    .revealed {
+      background-color: #ddd;
+      cursor: default;
+      box-shadow: inset 0 0 3px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Use a Bulma Hero to center content and set a dark background -->
+  <section class="hero is-fullheight is-dark">
+    <div class="hero-body">
+      <!-- Container with two columns. Adjusted column gap to bring left panel closer to the center. -->
+      <div class="container">
+        <div class="columns is-vcentered is-variable is-2 centered">
+          <!-- Left panel -->
+          <div class="column is-one-third left-panel">
+            <h1 class="title has-text-white">mines</h1>
+            {% if game_over %}
+              <h2 class="subtitle has-text-danger">womp womp</h2>
+            {% elif game_won %}
+              <h2 class="subtitle has-text-success">wowza...</h2>
+            {% endif %}
+            <a href="{{ url_for('restart') }}" class="button is-info is-rounded">start over</a>
+          </div>
+          <!-- Right panel -->
+          <div class="column is-two-thirds has-text-centered">
+            <div class="board" id="board">
+              {% for r in range(rows) %}
+                {% for c in range(cols) %}
+                  {% set cell = board[r][c] %}
+                  <div class="cell {% if cell.isRevealed %}revealed{% endif %}"
+                       data-r="{{ r }}" data-c="{{ c }}">
+                    {% if cell.isRevealed %}
+                      {% if cell.isMine %}
+                        <!-- Bomb icon -->
+                        &#128163;
+                      {% elif cell.adjacentMines > 0 %}
+                        {{ cell.adjacentMines }}
+                      {% endif %}
+                    {% else %}
+                      {% if cell.isFlagged %}
+                        <!-- Flag icon -->
+                        &#9873;
+                      {% endif %}
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Set gameEnded to a JavaScript boolean based on game_over or game_won.
+    const gameEnded = {{ 'true' if game_over or game_won else 'false' }};
+    
+    document.addEventListener("DOMContentLoaded", function() {
+      const boardElem = document.getElementById("board");
+      // Set grid-template-columns with enlarged cell size (40px)
+      boardElem.style.gridTemplateColumns = `repeat({{ cols }}, 40px)`;
+    });
+    
+    // Disable the default context menu so right click works as intended.
+    document.addEventListener("contextmenu", function(e) {
+      e.preventDefault();
+    });
+    
+    // Attach event listeners to each cell.
+    document.querySelectorAll('.cell').forEach(cell => {
+      // Left click to reveal the cell.
+      cell.addEventListener('click', function(e) {
+        if (gameEnded || cell.classList.contains('revealed')) return;
+        const r = cell.getAttribute('data-r');
+        const c = cell.getAttribute('data-c');
+        fetch('/reveal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `r=${r}&c=${c}`
+        }).then(() => location.reload());
+      });
+    
+      // Right click to place a flag.
+      cell.addEventListener('contextmenu', function(e) {
+        if (gameEnded || cell.classList.contains('revealed')) return;
+        const r = cell.getAttribute('data-r');
+        const c = cell.getAttribute('data-c');
+        fetch('/flag', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `r=${r}&c=${c}`
+        }).then(() => location.reload());
+      });
+    });
+  </script>
+</body>
+</html>
