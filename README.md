@@ -4,6 +4,7 @@
 
 This example shows how to use Flask 3 on Vercel with Serverless Functions using the [Python Runtime](https://vercel.com/docs/concepts/functions/serverless-functions/runtimes/python).
 
+Refere to this [video](https://www.youtube.com/watch?v=LaMVBDbUtMA)
 ## Demo
 
 https://flask-python-template.vercel.app/
